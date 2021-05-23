@@ -1,0 +1,8 @@
+N=[S, A, B, C, D]
+S=  S         
+S->a|bA|B|cc
+A->abB
+B->aA
+C->ddC
+D->ddd
+

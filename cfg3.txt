@@ -1,0 +1,7 @@
+N=[S, A, B, C, D]
+S=  S         
+S->A|B
+A->aB|bS|b
+B->AB|Ba
+C->AS|b|D
+D->aD|A|\e

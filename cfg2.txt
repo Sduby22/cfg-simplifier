@@ -1,0 +1,4 @@
+N=[S, A]
+S=  S         
+S->aSbS|bSaS|A|\e
+A->aA|b 

@@ -110,7 +110,7 @@ class CFG:
             self.P.pop(n)
             for key in self.N:
                 remove_list = [str for str in self.P[key] if any(x == n for x in str)]
-                self.P[key] = [item for item in self.P[key] if item not in remove_list]
+                self.P[key] = set([item for item in self.P[key] if item not in remove_list])
 
     def _remove_unreachable(self):
         # algorithm 2: remove unreachable symbols
@@ -137,7 +137,7 @@ class CFG:
             self.P.pop(n)
             for key in self.N:
                 remove_list = [str for str in self.P[key] if any(x == n for x in str)]
-                self.P[key] = [item for item in self.P[key] if item not in remove_list]
+                self.P[key] = set([item for item in self.P[key] if item not in remove_list])
 
     def _remove_useless(self):
         # algorithm 1&2

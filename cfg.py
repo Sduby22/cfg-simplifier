@@ -1,4 +1,5 @@
 from typing import Dict, List, Set
+from functools import reduce
 
 
 EPSILON = 'ε'
@@ -44,6 +45,11 @@ class CFG:
         self._remove_unit()
         self._remove_useless()
 
+    def _remove_useless(self):
+        # algorithm 1&2
+        self._remove_not_generating()
+        self._remove_unreachable()
+
     def _remove_null(self):
         # algorithm 3: epsilon elimination
         # step1: calculates all nullables
@@ -66,9 +72,9 @@ class CFG:
                     for bin_index in range(len(nullable_map)):
                         index, ch = nullable_map[bin_index]
                         new_str[index] = ch if binstr[bin_index] == '1' else EPSILON
-                        if not all(ch in nullables or ch == EPSILON for ch in dst_str):
+                        if not all(ch == EPSILON for ch in dst_str):
                             pending.add(''.join(new_str).replace(EPSILON, ''))
-                if all(ch in nullables or ch == EPSILON for ch in dst_str):
+                if all(ch == EPSILON for ch in dst_str):
                     remove_list.append(dst_str)
             list(map(lambda x: self.P[key].remove(x), remove_list))
             list(map(lambda x: self.pushP(key, x), pending))
@@ -84,8 +90,39 @@ class CFG:
     def _remove_unit(self):
         # algorithm 4: remove unit production 
         # Calculates all unit pairs of every character in N
+        unit_pairs: Dict[str, Set[str]]
+        unit_pairs = {}
+        def get_pairs_one_step(n) -> Set[str]:
+            if n in unit_pairs:
+                return unit_pairs[n]
+            pairs = set([n])
+            units = [item for item in self.P[n] if item in self.N]
+            pairs.update(units)
+            return pairs
+        def get_pairs_recursive(n, iterlist) -> Set[str]:
+            iterlist.append(n)
+            if n in unit_pairs:
+                return unit_pairs[n]
+            pairs = get_pairs_one_step(n)
+            pairs_list = [get_pairs_recursive(item, list(iterlist)) for item in pairs if item != n and item not in iterlist]
+            list(map(lambda x: pairs.update(x), pairs_list))
+            unit_pairs[n] = pairs
+            return pairs
+        for n in self.N:
+            get_pairs_recursive(n,[])
+
         # replace X->Y Y->a to X->a
-        pass
+        def get_non_unit_productions(n):
+            return [production for production in self.P[n] if production not in self.N]
+        non_unit_dict: Dict[str, Set[str]]
+        non_unit_dict = {}
+        for x in self.N:
+            non_unit_dict[x] = get_non_unit_productions(x)
+        for x in self.N:
+            new_p = set(non_unit_dict[x])   # non unit of x
+            for y in unit_pairs[x]:
+                new_p.update(non_unit_dict[y]) # non unit of unit pairs of x
+            self.P[x] = new_p
 
     def _remove_not_generating(self):
         # algorithm 1: remove non generating symbols
@@ -139,7 +176,3 @@ class CFG:
                 remove_list = [str for str in self.P[key] if any(x == n for x in str)]
                 self.P[key] = set([item for item in self.P[key] if item not in remove_list])
 
-    def _remove_useless(self):
-        # algorithm 1&2
-        self._remove_not_generating()
-        self._remove_unreachable()

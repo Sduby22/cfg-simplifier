@@ -35,8 +35,9 @@ class CFG:
             raise RuntimeError(f'{A} is not in N.')
         if(A not in self.P):
             self.P[A] = set([])
-        self.P[A].add(b)
-        self.T.update([ch for ch in b if ch not in self.N and ch != EPSILON])
+        if b:
+            self.P[A].add(b)
+            self.T.update([ch for ch in b if ch not in self.N and ch != EPSILON])
 
     def simplyfy(self):
         self._remove_null()
@@ -46,9 +47,38 @@ class CFG:
     def _remove_null(self):
         # algorithm 3: epsilon elimination
         # step1: calculates all nullables
-        nullable = [key for key in self.N if any(str == EPSILON for str in self.P[key])]
+        nullables = set([key for key in self.N if any(str == EPSILON for str in self.P[key])])
+        all_null = lambda x: all(ch in nullables or ch == EPSILON for ch in x)
+        new_nullables = set(nullables)
+        while new_nullables:
+            nullables.update(new_nullables)
+            new_nullables = [key for key in self.N - nullables if any(all_null(x) for x in self.P[key])]
+
         # step2: replace nullable characters to \e|ch
+        for key in self.N:
+            pending=set([])
+            remove_list = []
+            for dst_str in self.P[key]:
+                nullable_map = [(index, dst_str[index]) for index in range(len(dst_str)) if dst_str[index] in nullables]
+                for x in range(2 ** len(nullable_map) - 1):
+                    binstr = bin(x)[2:].rjust(len(nullable_map), '0')
+                    new_str = list(dst_str)
+                    for bin_index in range(len(nullable_map)):
+                        index, ch = nullable_map[bin_index]
+                        new_str[index] = ch if binstr[bin_index] == '1' else EPSILON
+                        if not all(ch in nullables or ch == EPSILON for ch in dst_str):
+                            pending.add(''.join(new_str).replace(EPSILON, ''))
+                if all(ch in nullables or ch == EPSILON for ch in dst_str):
+                    remove_list.append(dst_str)
+            list(map(lambda x: self.P[key].remove(x), remove_list))
+            list(map(lambda x: self.pushP(key, x), pending))
+
         # step3: if S in nullables, add S'
+        if self.S in nullables:
+            self.S = 'X'
+            self.N.add('X')
+            self.pushP('X', EPSILON)
+            self.pushP('X', 'S')
         pass
 
     def _remove_unit(self):
